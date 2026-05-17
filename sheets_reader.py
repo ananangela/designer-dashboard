@@ -36,7 +36,7 @@ class SheetsCache:
         self.data = data
         self.last_updated = datetime.now()
 
-_cache = SheetsCache()
+_cache = SheetsCache(cache_minutes=5)
 
 def get_sheets_service():
     """取得 Google Sheets API 服務
@@ -185,15 +185,14 @@ def fetch_raw_data(start_date=None, end_date=None, force_refresh=False):
             last_project = project
             last_designer = designer
 
-        filtered_rows.append({
-            'date_str': date_str,
-            'date_tuple': date_tuple,
-            'large_cat': large_cat,
-            'designer': actual_designer,
-            'category': category,
-            'project': actual_project,
-            'is_carry_over': is_carry_over
-        })
+        filtered_rows.append((
+            date_str,
+            date_tuple,
+            large_cat,
+            actual_designer,
+            category,
+            actual_project
+        ))
 
     # 僅當沒有日期過濾時快取結果
     if not start_date and not end_date:
@@ -208,8 +207,9 @@ def aggregate_by_designer(rows):
     """
     stats = defaultdict(int)
     for row in rows:
-        if row['designer']:
-            stats[row['designer']] += 1
+        designer = row[3]
+        if designer:
+            stats[designer] += 1
     return dict(stats)
 
 def aggregate_by_category(rows):
@@ -219,8 +219,9 @@ def aggregate_by_category(rows):
     """
     stats = defaultdict(int)
     for row in rows:
-        if row['category']:
-            stats[row['category']] += 1
+        category = row[4]
+        if category:
+            stats[category] += 1
     return dict(stats)
 
 def aggregate_by_dimension(rows, classifier):
@@ -234,7 +235,8 @@ def aggregate_by_dimension(rows, classifier):
     """
     stats = defaultdict(int)
     for row in rows:
-        dimensions = classifier.classify_dimension(row['project'])
+        project = row[5]
+        dimensions = classifier.classify_dimension(project)
         for dim in dimensions:
             stats[dim] += 1
     return dict(stats)
@@ -250,8 +252,9 @@ def aggregate_by_unit(rows, classifier):
     """
     stats = defaultdict(int)
     for row in rows:
-        unit = classifier.classify_project(row['project'])
-        if unit:  # 忽略 None（同上項目）
+        project = row[5]
+        unit = classifier.classify_project(project)
+        if unit:
             stats[unit] += 1
     return dict(stats)
 
@@ -266,7 +269,9 @@ def aggregate_by_material_type(rows, classifier):
     """
     stats = defaultdict(int)
     for row in rows:
-        material_type = classifier.identify_material_type(row['category'], row['project'])
+        category = row[4]
+        project = row[5]
+        material_type = classifier.identify_material_type(category, project)
         if material_type:
             stats[material_type] += 1
     return dict(stats)
@@ -282,7 +287,7 @@ def get_summary_stats(rows):
     """
     unique_projects = set()
     for row in rows:
-        unique_projects.add(row['project'])
+        unique_projects.add(row[5])
 
     return {
         'total': len(rows),
@@ -297,9 +302,9 @@ def get_daily_stats(rows):
     """
     stats = defaultdict(int)
     for row in rows:
-        stats[row['date_str']] += 1
+        date_str = row[0]
+        stats[date_str] += 1
 
-    # 按日期排序
     sorted_stats = sorted(stats.items(), key=lambda x: parse_date(x[0]) or (99, 99))
     return dict(sorted_stats)
 
