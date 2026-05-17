@@ -42,13 +42,25 @@ def get_sheets_service():
     """取得 Google Sheets API 服務
 
     支援三種認證方式：
-    1. Service Account (雲端部署用)
-    2. OAuth token.pickle (本地開發用)
+    1. OAuth token.pickle (優先 - 本地和雲端部署用)
+    2. Service Account (備用)
     3. OAuth 互動式登入
     """
     creds = None
 
-    # 1. Service Account 認證 (優先)
+    # 1. OAuth token.pickle 認證 (優先)
+    if os.path.exists('token.pickle'):
+        with open('token.pickle', 'rb') as token:
+            creds = pickle.load(token)
+
+        if creds and creds.valid:
+            return build('sheets', 'v4', credentials=creds)
+
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+            return build('sheets', 'v4', credentials=creds)
+
+    # 2. Service Account 認證 (備用)
     if os.environ.get('GOOGLE_SERVICE_ACCOUNT_JSON'):
         try:
             service_account_info = json.loads(os.environ['GOOGLE_SERVICE_ACCOUNT_JSON'])
@@ -57,18 +69,11 @@ def get_sheets_service():
         except Exception as e:
             print(f"Service Account 認證失敗: {e}")
 
-    # 2. OAuth token.pickle 認證 (本地開發用)
-    if os.path.exists('token.pickle'):
-        with open('token.pickle', 'rb') as token:
-            creds = pickle.load(token)
-
+    # 3. OAuth 互動式登入
     if not creds or not creds.valid:
-        if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-        else:
-            flow = InstalledAppFlow.from_client_secrets_file(
-                'credentials.json', SCOPES)
-            creds = flow.run_local_server(port=0)
+        flow = InstalledAppFlow.from_client_secrets_file(
+            'credentials.json', SCOPES)
+        creds = flow.run_local_server(port=0)
 
         with open('token.pickle', 'wb') as token:
             pickle.dump(creds, token)
