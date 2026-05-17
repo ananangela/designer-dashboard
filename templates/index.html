@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>設計團隊工作數據儀表板</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        }
+        .stat-card {
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-bottom: 2rem;
+        }
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+        }
+        .spinner {
+            border: 4px solid #e5e7eb;
+            border-top: 4px solid #3b82f6;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div class="min-h-screen">
+        <!-- 頁首 -->
+        <header class="bg-white shadow-sm sticky top-0 z-50">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+                <h1 class="text-3xl font-bold text-gray-900">設計團隊工作數據儀表板</h1>
+                <p class="text-gray-600 mt-1">實時監控設計團隊的工作狀況和案件分佈</p>
+            </div>
+        </header>
+
+        <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <!-- 篩選器 -->
+            <div class="bg-white rounded-lg shadow-sm p-6 mb-8">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div>
+                        <h2 class="text-lg font-semibold text-gray-900 mb-3">日期篩選</h2>
+                        <div class="flex flex-wrap gap-2">
+                            <button onclick="setDateRange('this_week')" class="px-4 py-2 rounded-lg bg-blue-500 text-white hover:bg-blue-600 transition">本週</button>
+                            <button onclick="setDateRange('last_week')" class="px-4 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 transition">上週</button>
+                            <button onclick="setDateRange('this_month')" class="px-4 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 transition">本月</button>
+                            <button onclick="setDateRange('last_month')" class="px-4 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 transition">上月</button>
+                        </div>
+                    </div>
+                    <button onclick="refreshData()" class="px-4 py-2 rounded-lg bg-green-500 text-white hover:bg-green-600 transition flex items-center gap-2">
+                        <span>🔄</span>
+                        <span>重新載入</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 摘要卡片 -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <div class="stat-card bg-white rounded-lg shadow-sm p-6">
+                    <h3 class="text-gray-600 text-sm font-medium">本週案件</h3>
+                    <p class="text-3xl font-bold text-blue-600 mt-2" id="stat-this-week">-</p>
+                    <p class="text-gray-500 text-xs mt-2">件</p>
+                </div>
+                <div class="stat-card bg-white rounded-lg shadow-sm p-6">
+                    <h3 class="text-gray-600 text-sm font-medium">上週案件</h3>
+                    <p class="text-3xl font-bold text-purple-600 mt-2" id="stat-last-week">-</p>
+                    <p class="text-gray-500 text-xs mt-2">件</p>
+                </div>
+                <div class="stat-card bg-white rounded-lg shadow-sm p-6">
+                    <h3 class="text-gray-600 text-sm font-medium">本月案件</h3>
+                    <p class="text-3xl font-bold text-green-600 mt-2" id="stat-this-month">-</p>
+                    <p class="text-gray-500 text-xs mt-2">件</p>
+                </div>
+                <div class="stat-card bg-white rounded-lg shadow-sm p-6">
+                    <h3 class="text-gray-600 text-sm font-medium">上月案件</h3>
+                    <p class="text-3xl font-bold text-orange-600 mt-2" id="stat-last-month">-</p>
+                    <p class="text-gray-500 text-xs mt-2">件</p>
+                </div>
+            </div>
+
+            <!-- 圖表區 -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- 維度分布 -->
+                <div class="bg-white rounded-lg shadow-sm p-6">
+                    <h2 class="text-lg font-semibold text-gray-900 mb-4">專案維度分布</h2>
+                    <div class="chart-container">
+                        <canvas id="dimensionsChart"></canvas>
+                        <div class="loading" id="dimensions-loading" style="display: none;"><div class="spinner"></div></div>
+                    </div>
+                    <div id="dimensions-stats" class="text-sm text-gray-600 space-y-1"></div>
+                </div>
+
+                <!-- 設計師案件對比 -->
+                <div class="bg-white rounded-lg shadow-sm p-6">
+                    <h2 class="text-lg font-semibold text-gray-900 mb-4">設計師案件對比 (本週 vs 上週)</h2>
+                    <div class="chart-container">
+                        <canvas id="designersChart"></canvas>
+                        <div class="loading" id="designers-loading" style="display: none;"><div class="spinner"></div></div>
+                    </div>
+                </div>
+
+                <!-- 案件類別分析 -->
+                <div class="bg-white rounded-lg shadow-sm p-6">
+                    <h2 class="text-lg font-semibold text-gray-900 mb-4">案件類別分析</h2>
+                    <div class="chart-container">
+                        <canvas id="categoriesChart"></canvas>
+                        <div class="loading" id="categories-loading" style="display: none;"><div class="spinner"></div></div>
+                    </div>
+                    <div id="categories-stats" class="text-sm text-gray-600 space-y-1"></div>
+                </div>
+
+                <!-- 案件單位分析 -->
+                <div class="bg-white rounded-lg shadow-sm p-6">
+                    <h2 class="text-lg font-semibold text-gray-900 mb-4">案件單位分析</h2>
+                    <div class="chart-container">
+                        <canvas id="unitsChart"></canvas>
+                        <div class="loading" id="units-loading" style="display: none;"><div class="spinner"></div></div>
+                    </div>
+                    <div id="units-stats" class="text-sm text-gray-600 space-y-1"></div>
+                </div>
+
+                <!-- 每日工作量趨勢 (全寬) -->
+                <div class="bg-white rounded-lg shadow-sm p-6 lg:col-span-2">
+                    <h2 class="text-lg font-semibold text-gray-900 mb-4">每日工作量趨勢</h2>
+                    <div class="chart-container" style="height: 250px;">
+                        <canvas id="dailyTrendChart"></canvas>
+                        <div class="loading" id="daily-loading" style="display: none;"><div class="spinner"></div></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 頁腳 -->
+            <div class="mt-12 py-6 border-t border-gray-200">
+                <p class="text-gray-600 text-sm text-center">
+                    最後更新: <span id="last-updated">-</span>
+                </p>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // 圖表實例
+        let charts = {};
+
+        // 顏色方案
+        const colors = {
+            blue: '#3b82f6',
+            purple: '#a855f7',
+            pink: '#ec4899',
+            red: '#ef4444',
+            orange: '#f97316',
+            amber: '#f59e0b',
+            yellow: '#eab308',
+            lime: '#84cc16',
+            green: '#22c55e',
+            emerald: '#10b981',
+            cyan: '#06b6d4',
+            sky: '#0ea5e9',
+            indigo: '#6366f1',
+            violet: '#8b5cf6',
+            rose: '#f43f5e'
+        };
+
+        const colorArray = Object.values(colors);
+
+        // 工具函數
+        function getColorForIndex(index) {
+            return colorArray[index % colorArray.length];
+        }
+
+        function updateLastUpdated() {
+            const now = new Date();
+            const timeStr = now.toLocaleString('zh-TW', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false
+            });
+            document.getElementById('last-updated').textContent = timeStr;
+        }
+
+        // 日期範圍管理
+        let currentDateRange = { start: null, end: null };
+
+        function setDateRange(range) {
+            // 更新按鈕狀態
+            document.querySelectorAll('button').forEach(btn => {
+                if (['本週', '上週', '本月', '上月'].includes(btn.textContent.trim())) {
+                    btn.classList.remove('bg-blue-500', 'text-white', 'hover:bg-blue-600');
+                    btn.classList.add('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300');
+                }
+            });
+
+            event.target.classList.remove('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300');
+            event.target.classList.add('bg-blue-500', 'text-white', 'hover:bg-blue-600');
+
+            // TODO: 實作日期計算邏輯
+            currentDateRange = { start: null, end: null };
+            loadData();
+        }
+
+        function refreshData() {
+            // 發送刷新請求
+            fetch('/api/refresh', { method: 'POST' })
+                .then(r => r.json())
+                .then(() => loadData())
+                .catch(err => console.error('刷新失敗:', err));
+        }
+
+        // API 呼叫
+        async function fetchAPI(endpoint, params = {}) {
+            const url = new URL(endpoint, window.location.origin);
+            Object.entries(params).forEach(([key, value]) => {
+                if (value !== null && value !== undefined) {
+                    url.searchParams.append(key, value);
+                }
+            });
+
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error(`API 錯誤: ${response.status}`);
+            }
+            return await response.json();
+        }
+
+        // 載入所有數據
+        async function loadData() {
+            updateLastUpdated();
+
+            try {
+                // 並行載入所有數據
+                const [summary, dimensions, designers, categories, units, dailyTrend] = await Promise.all([
+                    fetchAPI('/api/summary'),
+                    fetchAPI('/api/dimensions', { start: currentDateRange.start, end: currentDateRange.end }),
+                    fetchAPI('/api/designers'),
+                    fetchAPI('/api/categories', { start: currentDateRange.start, end: currentDateRange.end }),
+                    fetchAPI('/api/units', { start: currentDateRange.start, end: currentDateRange.end }),
+                    fetchAPI('/api/daily_trend', { start: currentDateRange.start, end: currentDateRange.end })
+                ]);
+
+                // 更新摘要卡片
+                document.getElementById('stat-this-week').textContent = summary.this_week;
+                document.getElementById('stat-last-week').textContent = summary.last_week;
+                document.getElementById('stat-this-month').textContent = summary.this_month;
+                document.getElementById('stat-last-month').textContent = summary.last_month;
+
+                // 更新圖表
+                updateDimensionsChart(dimensions);
+                updateDesignersChart(designers);
+                updateCategoriesChart(categories);
+                updateUnitsChart(units);
+                updateDailyTrendChart(dailyTrend);
+
+            } catch (error) {
+                console.error('載入數據失敗:', error);
+                alert('載入數據失敗，請稍後重試');
+            }
+        }
+
+        // 更新維度圖表
+        function updateDimensionsChart(data) {
+            const ctx = document.getElementById('dimensionsChart').getContext('2d');
+
+            if (charts.dimensions) {
+                charts.dimensions.destroy();
+            }
+
+            charts.dimensions = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: data.map(d => d.name),
+                    datasets: [{
+                        data: data.map(d => d.count),
+                        backgroundColor: data.map((_, i) => getColorForIndex(i)),
+                        borderColor: '#ffffff',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                font: { size: 12 },
+                                padding: 15
+                            }
+                        }
+                    }
+                }
+            });
+
+            // 更新統計信息
+            const statsHtml = data.map(d => `
+                <div class="flex justify-between">
+                    <span>${d.name}</span>
+                    <span class="font-semibold">${d.count} 件 (${d.percent}%)</span>
+                </div>
+            `).join('');
+            document.getElementById('dimensions-stats').innerHTML = statsHtml;
+        }
+
+        // 更新設計師圖表
+        function updateDesignersChart(data) {
+            const ctx = document.getElementById('designersChart').getContext('2d');
+
+            if (charts.designers) {
+                charts.designers.destroy();
+            }
+
+            charts.designers = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: data.map(d => d.name),
+                    datasets: [
+                        {
+                            label: '本週',
+                            data: data.map(d => d.this_week),
+                            backgroundColor: '#3b82f6'
+                        },
+                        {
+                            label: '上週',
+                            data: data.map(d => d.last_week),
+                            backgroundColor: '#a855f7'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    indexAxis: 'y',
+                    plugins: {
+                        legend: {
+                            labels: { font: { size: 12 } }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            ticks: { stepSize: 1 }
+                        }
+                    }
+                }
+            });
+        }
+
+        // 更新類別圖表
+        function updateCategoriesChart(data) {
+            const ctx = document.getElementById('categoriesChart').getContext('2d');
+
+            if (charts.categories) {
+                charts.categories.destroy();
+            }
+
+            charts.categories = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: data.map(d => d.name),
+                    datasets: [{
+                        label: '案件數',
+                        data: data.map(d => d.count),
+                        backgroundColor: data.map((_, i) => getColorForIndex(i))
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            ticks: { stepSize: 1 }
+                        }
+                    }
+                }
+            });
+
+            const statsHtml = data.map(d => `
+                <div class="flex justify-between">
+                    <span>${d.name}</span>
+                    <span class="font-semibold">${d.count} 件</span>
+                </div>
+            `).join('');
+            document.getElementById('categories-stats').innerHTML = statsHtml;
+        }
+
+        // 更新單位圖表
+        function updateUnitsChart(data) {
+            const ctx = document.getElementById('unitsChart').getContext('2d');
+
+            if (charts.units) {
+                charts.units.destroy();
+            }
+
+            charts.units = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: data.map(d => d.name),
+                    datasets: [{
+                        label: '案件數',
+                        data: data.map(d => d.count),
+                        backgroundColor: data.map((_, i) => getColorForIndex(i))
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            ticks: { stepSize: 1 }
+                        }
+                    }
+                }
+            });
+
+            const statsHtml = data.map(d => `
+                <div class="flex justify-between">
+                    <span>${d.name}</span>
+                    <span class="font-semibold">${d.count} 件</span>
+                </div>
+            `).join('');
+            document.getElementById('units-stats').innerHTML = statsHtml;
+        }
+
+        // 更新每日趨勢圖表
+        function updateDailyTrendChart(data) {
+            const ctx = document.getElementById('dailyTrendChart').getContext('2d');
+
+            if (charts.daily) {
+                charts.daily.destroy();
+            }
+
+            charts.daily = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.map(d => d.date),
+                    datasets: [{
+                        label: '案件數',
+                        data: data.map(d => d.count),
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        tension: 0.4,
+                        fill: true,
+                        pointRadius: 4,
+                        pointBackgroundColor: '#3b82f6',
+                        pointBorderColor: '#ffffff',
+                        pointBorderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: { font: { size: 12 } }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { stepSize: 1 }
+                        }
+                    }
+                }
+            });
+        }
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            loadData();
+            // 定期刷新 (每 5 分鐘)
+            setInterval(loadData, 5 * 60 * 1000);
+        });
+    </script>
+</body>
+</html>
