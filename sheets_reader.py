@@ -36,7 +36,7 @@ class SheetsCache:
         self.data = data
         self.last_updated = datetime.now()
 
-_cache = SheetsCache()
+_cache = SheetsCache(cache_minutes=2)
 
 def get_sheets_service():
     """取得 Google Sheets API 服務
@@ -134,12 +134,6 @@ def fetch_raw_data(start_date=None, end_date=None, force_refresh=False):
 
     Returns: list of rows (each row is [date, large_cat, designer, category, project])
     """
-    # 檢查快取（僅當沒有日期過濾時）
-    if not force_refresh and not start_date and not end_date:
-        cached = _cache.get()
-        if cached is not None:
-            return cached
-
     service = get_sheets_service()
     sheet = service.spreadsheets()
 
@@ -194,10 +188,6 @@ def fetch_raw_data(start_date=None, end_date=None, force_refresh=False):
             'project': actual_project,
             'is_carry_over': is_carry_over
         })
-
-    # 僅當沒有日期過濾時快取結果
-    if not start_date and not end_date:
-        _cache.set(filtered_rows)
 
     return filtered_rows
 
