@@ -110,7 +110,7 @@
 
                 <!-- 設計師案件對比 -->
                 <div class="bg-white rounded-lg shadow-sm p-6">
-                    <h2 class="text-lg font-semibold text-gray-900 mb-4">設計師案件對比 (本週 vs 上週)</h2>
+                    <h2 class="text-lg font-semibold text-gray-900 mb-4" id="designers-title">設計師案件對比</h2>
                     <div class="chart-container">
                         <canvas id="designersChart"></canvas>
                         <div class="loading" id="designers-loading" style="display: none;"><div class="spinner"></div></div>
@@ -286,7 +286,7 @@
                 const [summary, dimensions, designers, categories, units, dailyTrend] = await Promise.all([
                     fetchAPI('/api/summary'),
                     fetchAPI('/api/dimensions', { start: currentDateRange.start, end: currentDateRange.end }),
-                    fetchAPI('/api/designers'),
+                    fetchAPI('/api/designers', { start: currentDateRange.start, end: currentDateRange.end }),
                     fetchAPI('/api/categories', { start: currentDateRange.start, end: currentDateRange.end }),
                     fetchAPI('/api/units', { start: currentDateRange.start, end: currentDateRange.end }),
                     fetchAPI('/api/daily_trend', { start: currentDateRange.start, end: currentDateRange.end })
@@ -363,19 +363,34 @@
                 charts.designers.destroy();
             }
 
+            // 判斷數據格式 (current/previous 或 this_week/last_week)
+            const hasCurrentField = data.length > 0 && 'current' in data[0];
+
+            // 動態更新標題
+            let titleText = '設計師案件對比';
+            if (currentDateRange.start && currentDateRange.end) {
+                titleText += ` (${currentDateRange.start} ~ ${currentDateRange.end})`;
+            }
+            document.getElementById('designers-title').textContent = titleText;
+
+            const dataset1Label = hasCurrentField ? '當前' : '本週';
+            const dataset1Data = hasCurrentField ? data.map(d => d.current) : data.map(d => d.this_week);
+            const dataset2Label = hasCurrentField ? '前期' : '上週';
+            const dataset2Data = hasCurrentField ? data.map(d => d.previous) : data.map(d => d.last_week);
+
             charts.designers = new Chart(ctx, {
                 type: 'bar',
                 data: {
                     labels: data.map(d => d.name),
                     datasets: [
                         {
-                            label: '本週',
-                            data: data.map(d => d.this_week),
+                            label: dataset1Label,
+                            data: dataset1Data,
                             backgroundColor: '#3b82f6'
                         },
                         {
-                            label: '上週',
-                            data: data.map(d => d.last_week),
+                            label: dataset2Label,
+                            data: dataset2Data,
                             backgroundColor: '#a855f7'
                         }
                     ]
