@@ -215,8 +215,41 @@
             event.target.classList.remove('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300');
             event.target.classList.add('bg-blue-500', 'text-white', 'hover:bg-blue-600');
 
-            // TODO: 實作日期計算邏輯
-            currentDateRange = { start: null, end: null };
+            // 計算日期範圍
+            const today = new Date();
+            let startDate, endDate;
+
+            if (range === 'this_week') {
+                // 本週：從週一到今天
+                const dayOfWeek = today.getDay();
+                const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+                startDate = new Date(today);
+                startDate.setDate(today.getDate() - daysFromMonday);
+                endDate = today;
+            } else if (range === 'last_week') {
+                // 上週：上週一到上週日
+                const dayOfWeek = today.getDay();
+                const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+                endDate = new Date(today);
+                endDate.setDate(today.getDate() - daysFromMonday - 1);
+                startDate = new Date(endDate);
+                startDate.setDate(endDate.getDate() - 6);
+            } else if (range === 'this_month') {
+                // 本月：從月初到今天
+                startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+                endDate = today;
+            } else if (range === 'last_month') {
+                // 上月：整個上月
+                startDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+                endDate = new Date(today.getFullYear(), today.getMonth(), 0);
+            }
+
+            // 轉換為 M/D 格式
+            const formatDate = (date) => `${date.getMonth() + 1}/${date.getDate()}`;
+            currentDateRange = {
+                start: formatDate(startDate),
+                end: formatDate(endDate)
+            };
             loadData();
         }
 
