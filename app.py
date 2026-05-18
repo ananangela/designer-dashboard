@@ -95,6 +95,7 @@ def api_summary():
     }
     """
     try:
+        print("[DEBUG] Starting api_summary")
         # 本週
         this_week_start, this_week_end = get_week_date_range(0)
         this_week_rows = get_filtered_rows(this_week_start, this_week_end)
