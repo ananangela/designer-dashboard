@@ -42,22 +42,13 @@ def get_sheets_service():
     """取得 Google Sheets API 服務
 
     支援三種認證方式：
-    1. Service Account (雲端優先)
-    2. OAuth token.pickle (本地備用)
+    1. OAuth token.pickle (優先 - 本地和雲端部署用)
+    2. Service Account (備用)
     3. OAuth 互動式登入
     """
     creds = None
 
-    # 1. Service Account 認證 (優先 - 更穩定)
-    if os.environ.get('GOOGLE_SERVICE_ACCOUNT_JSON'):
-        try:
-            service_account_info = json.loads(os.environ['GOOGLE_SERVICE_ACCOUNT_JSON'])
-            creds = Credentials.from_service_account_info(service_account_info, scopes=SCOPES)
-            return build('sheets', 'v4', credentials=creds)
-        except Exception as e:
-            print(f"Service Account 認證失敗: {e}")
-
-    # 2. OAuth token.pickle 認證 (備用 - 本地開發)
+    # 1. OAuth token.pickle 認證 (優先)
     if os.path.exists('token.pickle'):
         with open('token.pickle', 'rb') as token:
             creds = pickle.load(token)
@@ -66,11 +57,17 @@ def get_sheets_service():
             return build('sheets', 'v4', credentials=creds)
 
         if creds and creds.expired and creds.refresh_token:
-            try:
-                creds.refresh(Request())
-                return build('sheets', 'v4', credentials=creds)
-            except:
-                pass
+            creds.refresh(Request())
+            return build('sheets', 'v4', credentials=creds)
+
+    # 2. Service Account 認證 (備用)
+    if os.environ.get('GOOGLE_SERVICE_ACCOUNT_JSON'):
+        try:
+            service_account_info = json.loads(os.environ['GOOGLE_SERVICE_ACCOUNT_JSON'])
+            creds = Credentials.from_service_account_info(service_account_info, scopes=SCOPES)
+            return build('sheets', 'v4', credentials=creds)
+        except Exception as e:
+            print(f"Service Account 認證失敗: {e}")
 
     # 3. OAuth 互動式登入
     if not creds or not creds.valid:
@@ -154,7 +151,7 @@ def fetch_raw_data(start_date=None, end_date=None, force_refresh=False):
     last_project = None
     last_designer = None
 
-    for i in range(3, len(values)):
+    for i in range(2, len(values)):
         row = values[i] if i < len(values) else []
 
         if not row or len(row) == 0:
@@ -162,8 +159,8 @@ def fetch_raw_data(start_date=None, end_date=None, force_refresh=False):
 
         date_str = row[0] if len(row) > 0 else ''
 
-        # 跳過空行和只含中文的行（如「01月」）
-        if not date_str or date_str.strip() in ['01月', '02月', '03月', '04月', '05月', '06月', '07月', '08月', '09月', '10月', '11月', '12月']:
+        # 跳過分組行（含 "-"）和空行
+        if '-' in date_str or not date_str:
             continue
 
         date_tuple = parse_date(date_str)
