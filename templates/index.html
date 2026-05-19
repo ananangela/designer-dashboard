@@ -59,10 +59,10 @@
                     <div>
                         <h2 class="text-lg font-semibold text-gray-900 mb-3">日期篩選</h2>
                         <div class="flex flex-wrap gap-2">
-                            <button onclick="setDateRange('this_week')" class="px-4 py-2 rounded-full bg-blue-500 text-white hover:bg-blue-600 transition">本週</button>
-                            <button onclick="setDateRange('last_week')" class="px-4 py-2 rounded-full bg-gray-200 text-gray-700 hover:bg-gray-300 transition">上週</button>
-                            <button onclick="setDateRange('this_month')" class="px-4 py-2 rounded-full bg-gray-200 text-gray-700 hover:bg-gray-300 transition">本月</button>
-                            <button onclick="setDateRange('last_month')" class="px-4 py-2 rounded-full bg-gray-200 text-gray-700 hover:bg-gray-300 transition">上月</button>
+                            <button onclick="setDateRange('this_week')" data-color="blue" class="px-4 py-2 rounded-full bg-blue-500 text-white hover:bg-blue-600 transition">本週</button>
+                            <button onclick="setDateRange('last_week')" data-color="purple" class="px-4 py-2 rounded-full bg-purple-100 text-purple-700 hover:bg-purple-200 transition">上週</button>
+                            <button onclick="setDateRange('this_month')" data-color="green" class="px-4 py-2 rounded-full bg-green-100 text-green-700 hover:bg-green-200 transition">本月</button>
+                            <button onclick="setDateRange('last_month')" data-color="orange" class="px-4 py-2 rounded-full bg-orange-100 text-orange-700 hover:bg-orange-200 transition">上月</button>
                         </div>
                     </div>
                     <button onclick="refreshData()" class="px-4 py-2 rounded-full transition flex items-center gap-2" style="background-color: #3a3a3a; color: #858585;" onmouseover="this.style.color='#ffffff'" onmouseout="this.style.color='#858585'">
@@ -204,16 +204,41 @@
         let currentDateRange = { start: null, end: null, type: null };
 
         function setDateRange(range) {
-            // 更新按鈕狀態
-            document.querySelectorAll('button').forEach(btn => {
-                if (['本週', '上週', '本月', '上月'].includes(btn.textContent.trim())) {
-                    btn.classList.remove('bg-blue-500', 'text-white', 'hover:bg-blue-600');
-                    btn.classList.add('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300');
+            // 顏色配置
+            const colorConfigs = {
+                blue: {
+                    active: ['bg-blue-500', 'text-white', 'hover:bg-blue-600'],
+                    inactive: ['bg-blue-100', 'text-blue-700', 'hover:bg-blue-200']
+                },
+                purple: {
+                    active: ['bg-purple-500', 'text-white', 'hover:bg-purple-600'],
+                    inactive: ['bg-purple-100', 'text-purple-700', 'hover:bg-purple-200']
+                },
+                green: {
+                    active: ['bg-green-500', 'text-white', 'hover:bg-green-600'],
+                    inactive: ['bg-green-100', 'text-green-700', 'hover:bg-green-200']
+                },
+                orange: {
+                    active: ['bg-orange-500', 'text-white', 'hover:bg-orange-600'],
+                    inactive: ['bg-orange-100', 'text-orange-700', 'hover:bg-orange-200']
+                }
+            };
+
+            // 更新所有日期按鈕狀態
+            document.querySelectorAll('button[data-color]').forEach(btn => {
+                const color = btn.getAttribute('data-color');
+                const config = colorConfigs[color];
+
+                if (btn === event.target) {
+                    // 選中狀態
+                    btn.classList.remove(...config.inactive);
+                    btn.classList.add(...config.active);
+                } else {
+                    // 未選中狀態
+                    btn.classList.remove(...config.active);
+                    btn.classList.add(...config.inactive);
                 }
             });
-
-            event.target.classList.remove('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300');
-            event.target.classList.add('bg-blue-500', 'text-white', 'hover:bg-blue-600');
 
             // 計算日期範圍
             const today = new Date();
