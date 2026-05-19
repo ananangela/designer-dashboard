@@ -59,13 +59,13 @@
                     <div>
                         <h2 class="text-lg font-semibold text-gray-900 mb-3">日期篩選</h2>
                         <div class="flex flex-wrap gap-2">
-                            <button onclick="setDateRange('this_week')" class="px-4 py-2 rounded-lg bg-blue-500 text-white hover:bg-blue-600 transition">本週</button>
-                            <button onclick="setDateRange('last_week')" class="px-4 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 transition">上週</button>
-                            <button onclick="setDateRange('this_month')" class="px-4 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 transition">本月</button>
-                            <button onclick="setDateRange('last_month')" class="px-4 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 transition">上月</button>
+                            <button onclick="setDateRange('this_week')" class="px-4 py-2 rounded-full bg-blue-500 text-white hover:bg-blue-600 transition">本週</button>
+                            <button onclick="setDateRange('last_week')" class="px-4 py-2 rounded-full bg-gray-200 text-gray-700 hover:bg-gray-300 transition">上週</button>
+                            <button onclick="setDateRange('this_month')" class="px-4 py-2 rounded-full bg-gray-200 text-gray-700 hover:bg-gray-300 transition">本月</button>
+                            <button onclick="setDateRange('last_month')" class="px-4 py-2 rounded-full bg-gray-200 text-gray-700 hover:bg-gray-300 transition">上月</button>
                         </div>
                     </div>
-                    <button onclick="refreshData()" class="px-4 py-2 rounded-lg bg-green-500 text-white hover:bg-green-600 transition flex items-center gap-2">
+                    <button onclick="refreshData()" class="px-4 py-2 rounded-full transition flex items-center gap-2" style="background-color: #3a3a3a; color: #858585;" onmouseover="this.style.color='#ffffff'" onmouseout="this.style.color='#858585'">
                         <span>🔄</span>
                         <span>重新載入</span>
                     </button>
