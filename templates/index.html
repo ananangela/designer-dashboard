@@ -201,7 +201,7 @@
         }
 
         // 日期範圍管理
-        let currentDateRange = { start: null, end: null };
+        let currentDateRange = { start: null, end: null, type: null };
 
         function setDateRange(range) {
             // 更新按鈕狀態
@@ -248,7 +248,8 @@
             const formatDate = (date) => `${date.getMonth() + 1}/${date.getDate()}`;
             currentDateRange = {
                 start: formatDate(startDate),
-                end: formatDate(endDate)
+                end: formatDate(endDate),
+                type: range
             };
             loadData();
         }
@@ -286,7 +287,11 @@
                 const [summary, dimensions, designers, categories, units, dailyTrend] = await Promise.all([
                     fetchAPI('/api/summary'),
                     fetchAPI('/api/dimensions', { start: currentDateRange.start, end: currentDateRange.end }),
-                    fetchAPI('/api/designers', { start: currentDateRange.start, end: currentDateRange.end }),
+                    fetchAPI('/api/designers', {
+                        start: currentDateRange.start,
+                        end: currentDateRange.end,
+                        range_type: currentDateRange.type
+                    }),
                     fetchAPI('/api/categories', { start: currentDateRange.start, end: currentDateRange.end }),
                     fetchAPI('/api/units', { start: currentDateRange.start, end: currentDateRange.end }),
                     fetchAPI('/api/daily_trend', { start: currentDateRange.start, end: currentDateRange.end })
@@ -363,20 +368,13 @@
                 charts.designers.destroy();
             }
 
-            // 判斷數據格式 (current/previous 或 this_week/last_week)
-            const hasCurrentField = data.length > 0 && 'current' in data[0];
+            // 動態取得標籤 (從後端數據或使用預設值)
+            const dataset1Label = data.length > 0 && data[0].current_label ? data[0].current_label : '當前';
+            const dataset2Label = data.length > 0 && data[0].previous_label ? data[0].previous_label : '前期';
 
             // 動態更新標題
-            let titleText = '設計師案件對比';
-            if (currentDateRange.start && currentDateRange.end) {
-                titleText += ` (${currentDateRange.start} ~ ${currentDateRange.end})`;
-            }
+            let titleText = `設計師案件對比 (${dataset1Label} vs ${dataset2Label})`;
             document.getElementById('designers-title').textContent = titleText;
-
-            const dataset1Label = hasCurrentField ? '當前' : '本週';
-            const dataset1Data = hasCurrentField ? data.map(d => d.current) : data.map(d => d.this_week);
-            const dataset2Label = hasCurrentField ? '前期' : '上週';
-            const dataset2Data = hasCurrentField ? data.map(d => d.previous) : data.map(d => d.last_week);
 
             charts.designers = new Chart(ctx, {
                 type: 'bar',
@@ -385,12 +383,12 @@
                     datasets: [
                         {
                             label: dataset1Label,
-                            data: dataset1Data,
+                            data: data.map(d => d.current),
                             backgroundColor: '#3b82f6'
                         },
                         {
                             label: dataset2Label,
-                            data: dataset2Data,
+                            data: data.map(d => d.previous),
                             backgroundColor: '#a855f7'
                         }
                     ]
