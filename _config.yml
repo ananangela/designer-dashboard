@@ -1,0 +1,4 @@
+# GitHub Pages Jekyll configuration
+theme: null
+plugins: []
+exclude: [node_modules]
