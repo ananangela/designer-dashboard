@@ -60,9 +60,9 @@
                         <h2 class="text-lg font-semibold text-gray-900 mb-3">日期篩選</h2>
                         <div class="flex flex-wrap gap-2">
                             <button onclick="setDateRange('this_week')" data-color="blue" class="px-4 py-2 rounded-full bg-blue-500 text-white hover:bg-blue-600 transition">本週</button>
-                            <button onclick="setDateRange('last_week')" data-color="purple" class="px-4 py-2 rounded-full bg-purple-100 text-purple-700 hover:bg-purple-200 transition">上週</button>
-                            <button onclick="setDateRange('this_month')" data-color="green" class="px-4 py-2 rounded-full bg-green-100 text-green-700 hover:bg-green-200 transition">本月</button>
-                            <button onclick="setDateRange('last_month')" data-color="orange" class="px-4 py-2 rounded-full bg-orange-100 text-orange-700 hover:bg-orange-200 transition">上月</button>
+                            <button onclick="setDateRange('last_week')" data-color="purple" class="px-4 py-2 rounded-full bg-gray-200 text-gray-700 hover:bg-gray-300 transition">上週</button>
+                            <button onclick="setDateRange('this_month')" data-color="green" class="px-4 py-2 rounded-full bg-gray-200 text-gray-700 hover:bg-gray-300 transition">本月</button>
+                            <button onclick="setDateRange('last_month')" data-color="orange" class="px-4 py-2 rounded-full bg-gray-200 text-gray-700 hover:bg-gray-300 transition">上月</button>
                         </div>
                     </div>
                     <button onclick="refreshData()" class="px-4 py-2 rounded-full transition flex items-center gap-2" style="background-color: #3a3a3a; color: #858585;" onmouseover="this.style.color='#ffffff'" onmouseout="this.style.color='#858585'">
@@ -208,19 +208,19 @@
             const colorConfigs = {
                 blue: {
                     active: ['bg-blue-500', 'text-white', 'hover:bg-blue-600'],
-                    inactive: ['bg-blue-100', 'text-blue-700', 'hover:bg-blue-200']
+                    inactive: ['bg-gray-200', 'text-gray-700', 'hover:bg-gray-300']
                 },
                 purple: {
                     active: ['bg-purple-500', 'text-white', 'hover:bg-purple-600'],
-                    inactive: ['bg-purple-100', 'text-purple-700', 'hover:bg-purple-200']
+                    inactive: ['bg-gray-200', 'text-gray-700', 'hover:bg-gray-300']
                 },
                 green: {
                     active: ['bg-green-500', 'text-white', 'hover:bg-green-600'],
-                    inactive: ['bg-green-100', 'text-green-700', 'hover:bg-green-200']
+                    inactive: ['bg-gray-200', 'text-gray-700', 'hover:bg-gray-300']
                 },
                 orange: {
                     active: ['bg-orange-500', 'text-white', 'hover:bg-orange-600'],
-                    inactive: ['bg-orange-100', 'text-orange-700', 'hover:bg-orange-200']
+                    inactive: ['bg-gray-200', 'text-gray-700', 'hover:bg-gray-300']
                 }
             };
 
@@ -570,53 +570,15 @@
         document.addEventListener('DOMContentLoaded', () => {
             // 初始化為本週
             const thisWeekBtn = document.querySelector('button[onclick="setDateRange(\'this_week\')"]');
-            const today = new Date();
-            const dayOfWeek = today.getDay();
-            const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-            const startDate = new Date(today);
-            startDate.setDate(today.getDate() - daysFromMonday);
-            const endDate = today;
-
-            const formatDate = (date) => `${date.getMonth() + 1}/${date.getDate()}`;
-            currentDateRange = {
-                start: formatDate(startDate),
-                end: formatDate(endDate),
-                type: 'this_week'
-            };
-
-            // 更新按鈕狀態
-            const colorConfigs = {
-                blue: {
-                    active: ['bg-blue-500', 'text-white', 'hover:bg-blue-600'],
-                    inactive: ['bg-blue-100', 'text-blue-700', 'hover:bg-blue-200']
-                },
-                purple: {
-                    active: ['bg-purple-500', 'text-white', 'hover:bg-purple-600'],
-                    inactive: ['bg-purple-100', 'text-purple-700', 'hover:bg-purple-200']
-                },
-                green: {
-                    active: ['bg-green-500', 'text-white', 'hover:bg-green-600'],
-                    inactive: ['bg-green-100', 'text-green-700', 'hover:bg-green-200']
-                },
-                orange: {
-                    active: ['bg-orange-500', 'text-white', 'hover:bg-orange-600'],
-                    inactive: ['bg-orange-100', 'text-orange-700', 'hover:bg-orange-200']
-                }
-            };
-
-            document.querySelectorAll('button[data-color]').forEach(btn => {
-                const color = btn.getAttribute('data-color');
-                const config = colorConfigs[color];
-                if (color === 'blue') {
-                    btn.classList.remove(...config.inactive);
-                    btn.classList.add(...config.active);
-                } else {
-                    btn.classList.remove(...config.active);
-                    btn.classList.add(...config.inactive);
-                }
+            // 模擬點擊本週按鈕以觸發完整的初始化邏輯
+            const event = new MouseEvent('click', {
+                view: window,
+                bubbles: true,
+                cancelable: true
             });
+            Object.defineProperty(event, 'target', { value: thisWeekBtn, enumerable: true });
+            setDateRange.call(thisWeekBtn, 'this_week');
 
-            loadData();
             // 定期刷新 (每 5 分鐘)
             setInterval(loadData, 5 * 60 * 1000);
         });
